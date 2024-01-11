@@ -1,0 +1,93 @@
+diff --git a/scipy/sparse/linalg/_isolve/tests/test_iterative.py b/scipy/sparse/linalg/_isolve/tests/test_iterative.py
+index a782a8d27c2..48fc16b7a00 100644
+--- a/scipy/sparse/linalg/_isolve/tests/test_iterative.py
++++ b/scipy/sparse/linalg/_isolve/tests/test_iterative.py
+@@ -409,7 +409,9 @@ def test_atol(solver):
+         residual = A.dot(x) - b
+         err = np.linalg.norm(residual)
+         atol2 = tol * b_norm
+-        assert_(err <= max(atol, atol2))
++        # Added 1.00025 fudge factor because of `err` exceeding `atol` just
++        # very slightly on s390x (see gh-17839)
++        assert_(err <= 1.00025 * max(atol, atol2))
+ 
+ 
+ @pytest.mark.parametrize("solver", [cg, cgs, bicg, bicgstab, gmres, qmr, minres, lgmres, gcrotmk, tfqmr])
+@@ -452,8 +454,10 @@ def test_zero_rhs(solver):
+                                                 and sys.version_info[1] == 9,
+                                                 reason="gh-13019")),
+     qmr,
+-    pytest.param(lgmres, marks=pytest.mark.xfail(platform.machine() == 'ppc64le',
+-                                                 reason="fails on ppc64le")),
++    pytest.param(lgmres, marks=pytest.mark.xfail(
++        platform.machine() not in ['x86_64' 'x86', 'aarch64', 'arm64'],
++        reason="fails on at least ppc64le, ppc64 and riscv64, see gh-17839")
++    ),
+     pytest.param(cgs, marks=pytest.mark.xfail),
+     pytest.param(bicg, marks=pytest.mark.xfail),
+     pytest.param(bicgstab, marks=pytest.mark.xfail),
+diff --git a/scipy/special/tests/test_orthogonal.py b/scipy/special/tests/test_orthogonal.py
+index a325cb1a9ef..408b03bde2e 100644
+--- a/scipy/special/tests/test_orthogonal.py
++++ b/scipy/special/tests/test_orthogonal.py
+@@ -546,7 +546,7 @@ def test_roots_gegenbauer():
+     vgq(rootf(170), evalf(170), weightf(170), -1., 1., 5, atol=1e-13)
+     vgq(rootf(170), evalf(170), weightf(170), -1., 1., 25, atol=1e-12)
+     vgq(rootf(170), evalf(170), weightf(170), -1., 1., 100, atol=1e-11)
+-    vgq(rootf(170.5), evalf(170.5), weightf(170.5), -1., 1., 5, atol=1e-13)
++    vgq(rootf(170.5), evalf(170.5), weightf(170.5), -1., 1., 5, atol=1.25e-13)
+     vgq(rootf(170.5), evalf(170.5), weightf(170.5), -1., 1., 25, atol=1e-12)
+     vgq(rootf(170.5), evalf(170.5), weightf(170.5), -1., 1., 100, atol=1e-11)
+ 
+diff --git a/scipy/stats/tests/test_distributions.py b/scipy/stats/tests/test_distributions.py
+index eceeafdffe0..139b0537174 100644
+--- a/scipy/stats/tests/test_distributions.py
++++ b/scipy/stats/tests/test_distributions.py
+@@ -4254,7 +4254,7 @@ def test_pdf_nolan_samples(
+             ],
+             # for small alpha very slightly reduced accuracy
+             [
+-                'piecewise', 5e-11, lambda r: (
++                'piecewise', 2.5e-10, lambda r: (
+                     np.isin(r['pct'], pct_range) &
+                     np.isin(r['alpha'], alpha_range) &
+                     np.isin(r['beta'], beta_range) &
+@@ -4358,7 +4358,7 @@ def test_cdf_nolan_samples(
+         tests = [
+             # piecewise generally good accuracy
+             [
+-                'piecewise', 1e-12, lambda r: (
++                'piecewise', 2e-12, lambda r: (
+                     np.isin(r['pct'], pct_range) &
+                     np.isin(r['alpha'], alpha_range) &
+                     np.isin(r['beta'], beta_range) &
+@@ -4480,6 +4480,14 @@ def test_location_scale(
+     ):
+         """Tests for pdf and cdf where loc, scale are different from 0, 1
+         """
++
++        uname = platform.uname()
++        is_linux_32 = uname.system == 'Linux' and "32bit" in platform.architecture()[0]
++        # Test seems to be unstable (see gh-17839 for a bug report on Debian
++        # i386), so skip it.
++        if is_linux_32 and case == 'pdf':
++            pytest.skip("Test unstable on some platforms; see gh-17839, 17859")
++
+         data = nolan_loc_scale_sample_data
+         # We only test against piecewise as location/scale transforms
+         # are same for other methods.
+diff --git a/scipy/stats/tests/test_mstats_basic.py b/scipy/stats/tests/test_mstats_basic.py
+index cd53c7b7914..76cbfd8c253 100644
+--- a/scipy/stats/tests/test_mstats_basic.py
++++ b/scipy/stats/tests/test_mstats_basic.py
+@@ -1768,8 +1768,8 @@ def test_skewtest_2D_WithMask(self):
+                 r = stats.skewtest(x)
+                 rm = stats.mstats.skewtest(xm)
+ 
+-                assert_allclose(r[0][0], rm[0][0], rtol=2e-15)
+-                assert_allclose(r[0][1], rm[0][1], rtol=1e-15)
++                assert_allclose(r[0][0], rm[0][0], rtol=1e-14)
++                assert_allclose(r[0][1], rm[0][1], rtol=1e-14)
+ 
+     def test_normaltest(self):
+         with np.errstate(over='raise'), suppress_warnings() as sup:

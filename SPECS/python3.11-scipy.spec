@@ -21,8 +21,8 @@
 
 Summary:    Scientific Tools for Python
 Name:       python%{python3_pkgversion}-scipy
-Version:    1.10.1
-Release:    2%{?dist}
+Version:    1.10.0
+Release:    1%{?dist}
 
 # BSD -- whole package except:
 # Boost -- scipy/special/cephes/scipy_iv.c
@@ -31,10 +31,10 @@ License:    BSD and Boost and Public Domain
 Url:        http://www.scipy.org/scipylib/index.html
 Source0:    https://github.com/scipy/scipy/releases/download/v%{version}/scipy-%{version}.tar.gz
 
-
-# Fix test_milp_timeout failure
-# Resolved upstream: https://github.com/scipy/scipy/pull/18339
-Patch0:     fix_test_milp_timeout.patch
+# Fix some test failures on 32 bits
+# https://github.com/scipy/scipy/pull/17859
+# https://github.com/scipy/scipy/pull/17931
+Patch0:     fix-32bit-test-failures.patch
 
 BuildRequires: fftw-devel, suitesparse-devel
 BuildRequires: %{blaslib}-devel
@@ -243,12 +243,6 @@ popd
 %{python3_sitearch}/*.egg-info
 
 %changelog
-* Wed May 10 2023 Charalampos Stratakis <cstratak@redhat.com> - 1.10.1-2
-- Fix test_milp_timeout failure
-
-* Tue May 02 2023 Ryan Erickson <rerickso@redhat.com> - 1.10.1-1
-- Update to 1.10.1
-
 * Sun Feb 19 2023 Charalampos Stratakis <cstratak@redhat.com> - 1.10.0-1
 - Update to 1.10.0
 
